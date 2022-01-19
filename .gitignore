@@ -1,2 +1,5 @@
 __pycache__
 Config.py
+*.hdf5
+*.h5
+*~

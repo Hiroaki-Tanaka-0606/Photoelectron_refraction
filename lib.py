@@ -4,6 +4,7 @@
 import math
 import numpy as np
 import Config
+import random
 
 def gauss(x, s):
     return 1.0/(math.sqrt(2*math.pi)*s)*math.exp(-x*x/(s*s*2))
@@ -46,17 +47,121 @@ def calc1(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, kxMin, kxMax, kxCount, d
             
             kdiff=k-k0
 
-            ek=np.inner(kdiff, kdiff)*a/2.0-W+V1
-            ek_index=round((ek-eMin)/de)
+            esk=np.inner(kdiff, kdiff)*a/2.0-W+V1
+            esk_index=round((esk-eMin)/de)
 
             for i2 in range(-kxCenter, kxCenter+1):
                 i3=i+i2
                 for j2 in range(-kyCenter, kyCenter+1):
                     j3=j+j2
                     for k2 in range(-eCenter, eCenter+1):
-                        k3=ek_index+k2
+                        k3=esk_index+k2
                         if 0<=i3 and i3<kxCount and 0<=j3 and j3<kyCount and 0<=k3 and k3<eCount:
                             dispCube1[i3][j3][k3]+=profile[i2+kxCenter][j2+kyCenter][k2+eCenter]
+
+def calc2(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, surfaceConst, surfaceConst_theta, surfaceConst_phi, surfaceRandom_samples, kxMin, kxMax, kxCount, dkx, kyMin, kyMax, kyCount, dky, eMin, eMax, eCount, de, sigmak, sigmae, dispCube2):
+    profile, kxCenter, kyCenter, eCenter=profileCube(dkx, dky, de, sigmak, sigmae, Config.sigmaMax)
+
+    k=np.zeros((3))
+    n=np.zeros((3))
+    if surfaceConst==True:
+        n[0]=math.sin(surfaceConst_theta)*math.cos(surfaceConst_phi)
+        n[1]=math.sin(surfaceConst_theta)*math.sin(surfaceConst_phi)
+        n[2]=math.cos(surfaceConst_theta)
+
+    if surfaceConst==False:
+        nList=np.zeros((surfaceRandom_samples, 3))
+        for i in range(surfaceRandom_samples):
+            nList[i]=genSurface()
+        
+        # print(nList)
+
+    for i in range(kxCount+1):
+        k[0]=kxMin+dkx*i
+        for j in range(kyCount+1):
+            k[1]=kyMin+dky*j
+            if kFlat==True:
+                k[2]=kFlat_kz
+            if kFlat==False:
+                k[2]=math.sqrt(kCurved_k*kCurved_k-k[0]*k[0]-k[1]*k[1])
+
+            kdiff=k-k0
+            esk=np.inner(kdiff, kdiff)*a/2.0-W+V1
+            epk=np.inner(k, k)/2.0-V0
+            eK=round((esk-eMin)/de)
+
+            if surfaceConst==True:
+                K=calcK(k, epk, n)
+
+                iK=round((K[0]-kxMin)/dkx)
+                jK=round((K[1]-kyMin)/dky)
+
+                for i2 in range(-kxCenter, kxCenter+1):
+                    i3=iK+i2
+                    for j2 in range(-kyCenter, kyCenter+1):
+                        j3=jK+j2
+                        for k2 in range(-eCenter, eCenter+1):
+                            k3=eK+k2
+                            if 0<=i3 and i3<kxCount and 0<=j3 and j3<kyCount and 0<=k3 and k3<eCount:
+                                dispCube2[i3][j3][k3]+=profile[i2+kxCenter][j2+kyCenter][k2+eCenter]
+
+            else:
+                for t in range(surfaceRandom_samples):
+                    n=nList[t]
+                    K=calcK(k, epk, n)
+                    if K is None:
+                        # print("!!Full reflection")
+                        continue
+
+                    iK=round((K[0]-kxMin)/dkx)
+                    jK=round((K[1]-kyMin)/dky)
+
+                    for i2 in range(-kxCenter, kxCenter+1):
+                        i3=iK+i2
+                        for j2 in range(-kyCenter, kyCenter+1):
+                            j3=jK+j2
+                            for k2 in range(-eCenter, eCenter+1):
+                                k3=eK+k2
+                                if 0<=i3 and i3<kxCount and 0<=j3 and j3<kyCount and 0<=k3 and k3<eCount:
+                                    dispCube2[i3][j3][k3]+=profile[i2+kxCenter][j2+kyCenter][k2+eCenter]/surfaceRandom_samples
+
+
+
+
+
+def calcK(k, epk, n):
+    KLength=math.sqrt(2*epk)
+
+    kPerpLength=np.inner(k, n)
+    kPara=k-kPerpLength*n
+
+    
+    KPerpLength2=KLength*KLength-np.inner(kPara, kPara)
+    if KPerpLength2<0:
+        return None
+
+    KPerpLength=math.sqrt(KPerpLength2)
+    if kPerpLength<0:
+        KPerpLength*=-1
+
+    K=kPara+KPerpLength*n
+
+    return K
+
+def genSurface():
+    nt=np.zeros((3))
+    while True:
+        nt[0]=random.uniform(-1, 1)
+        nt[1]=random.uniform(-1, 1)
+        nt[2]=random.uniform(0, 1)
+
+        nt_length=math.sqrt(np.inner(nt, nt))
+        if 0.1 < nt_length and nt_length < 1:
+            n=nt/nt_length
+            return n
+        
+        
+            
 
 
 

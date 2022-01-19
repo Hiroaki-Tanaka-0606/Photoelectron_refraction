@@ -7,6 +7,8 @@ import pyqtgraph as pg
 import numpy as np
 import math
 import lib
+import h5py
+from datetime import datetime
 
 import Config
 
@@ -214,13 +216,18 @@ class MainWindow(QtGui.QMainWindow):
         self.startCalc=QtGui.QPushButton("Start calculation")
         row7.addWidget(self.startCalc)
 
-        self.plotDisp1=QtGui.QCheckBox("Original")
+        self.plotChoice=QtGui.QButtonGroup()
+        self.plotDisp1=QtGui.QRadioButton("Original")
+        self.plotDisp1.setFont(bFont)
+        self.plotChoice.addButton(self.plotDisp1)
         row7.addWidget(self.plotDisp1)
-        self.plotDisp2=QtGui.QCheckBox("Refracted")
+        self.plotDisp2=QtGui.QRadioButton("Refracted")
+        self.plotDisp2.setFont(bFont)
+        self.plotChoice.addButton(self.plotDisp2)
         row7.addWidget(self.plotDisp2)
 
-        self.plotDisp=QtGui.QPushButton("Plot dispersion")
-        row7.addWidget(self.plotDisp)
+        self.export=QtGui.QPushButton("Export")
+        row7.addWidget(self.export)
 
         # Row 8: kx, ky, and e index
         row8=QtGui.QHBoxLayout()
@@ -501,16 +508,23 @@ def startCalc():
     dispCube1=np.zeros((kxCount, kyCount, eCount))
     lib.calc1(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, kxMin, kxMax, kxCount, dkx, kyMin, kyMax, kyCount, dky, eMin, eMax, eCount, de, sigmak, sigmae, dispCube1)
 
-
+    global dispCube2
     dispCube2=np.zeros(dispCube1.shape)
+    lib.calc2(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, surfaceConst, surfaceConst_theta, surfaceConst_phi, surfaceRandom_samples, kxMin, kxMax, kxCount, dkx, kyMin, kyMax, kyCount, dky, eMin, eMax, eCount, de, sigmak, sigmae, dispCube2)
 
     win.kxIndex.setMaximum(kxCount-1)
     win.kyIndex.setMaximum(kyCount-1)
     win.eIndex.setMaximum(eCount-1)
     print("Calculation finished")
 
+    plotDisp()
+
 def plotDisp():
     global dispCube1
+    global dispCube2
+
+    if dispCube1 is None or dispCube2 is None:
+        return
 
     kxIndex=win.kxIndex.value()
     kyIndex=win.kyIndex.value()
@@ -537,6 +551,10 @@ def plotDisp():
         print(e)
         return
 
+    if dispCube1.shape[0]!=kxCount or dispCube1.shape[1]!=kyCount or dispCube1.shape[2]!=eCount or dispCube2.shape[0]!=kxCount or dispCube2.shape[1]!=kyCount or dispCube2.shape[2]!=eCount:
+        print("Plot error: size mismatch")
+        return 
+
     kxValue=kxMin+dkx*kxIndex
     kyValue=kyMin+dky*kyIndex
     eValue=eMin+de*eIndex
@@ -552,14 +570,17 @@ def plotDisp():
     win.vLinexy.setPos(kxValue)
     win.hLinexy.setPos(kyValue)
 
-    Ex=np.zeros((kxCount, eCount))
-    Ey=np.zeros((kyCount, eCount))
-    xy=np.zeros((kxCount, kyCount))
-
     if win.plotDisp1.isChecked()==True:
-        Ex+=dispCube1[:,kyIndex,:]
-        Ey+=dispCube1[kxIndex,:,:]
-        xy+=dispCube1[:,:,eIndex]
+        Ex=dispCube1[:,kyIndex,:]
+        Ey=dispCube1[kxIndex,:,:]
+        xy=dispCube1[:,:,eIndex]
+    elif win.plotDisp2.isChecked()==True:
+        Ex=dispCube2[:,kyIndex,:]
+        Ey=dispCube2[kxIndex,:,:]
+        xy=dispCube2[:,:,eIndex]
+    else:
+        return
+
 
     tr_Ex=QtGui.QTransform()
     tr_Ex.translate(kxMin-dkx/2,eMin-de/2)
@@ -581,11 +602,114 @@ def plotDisp():
     win.imgEy.setImage(Ey)
     win.imgxy.setImage(xy)
 
+def exportDisp():
+    global dispCube1
+    global dispCube2
     
+    try:    
+        kxMin=float(win.kxMintext.text())
+        kxMax=float(win.kxMaxtext.text())
+        kxCount=int(win.kxCounttext.text())
+
+        kyMin=float(win.kyMintext.text())
+        kyMax=float(win.kyMaxtext.text())
+        kyCount=int(win.kyCounttext.text())
+
+        eMin=float(win.eMintext.text())
+        eMax=float(win.eMaxtext.text())
+        eCount=int(win.eCounttext.text())
+
+        dkx=(kxMax-kxMin)/(kxCount-1)
+        dky=(kyMax-kyMin)/(kyCount-1)
+        de=(eMax-eMin)/(eCount-1)
+
+        
+        W=float(win.Wtext.text())
+        V0=float(win.V0text.text())
+
+        a=float(win.atext.text())
+        V1=float(win.V1text.text())
+
+        k0=np.zeros((3))
+        k0[0]=float(win.k0xtext.text())
+        k0[1]=float(win.k0ytext.text())
+        k0[2]=float(win.k0ztext.text())
+
+        kFlat=True
+        if win.kFlat.isChecked()==True:
+            pass
+        elif win.kCurved.isChecked()==True:
+            kFlat=False
+        else:
+            return
+
+        kFlat_kz=0
+        kCurved_k=0
+        if kFlat==True:
+            kFlat_kz=float(win.kFlat_kz.text())
+        else:
+            kCurved_k=float(win.kCurved_k.text())
+
+        surfaceConst=True
+        if win.surfaceConst.isChecked()==True:
+            pass
+        elif win.surfaceRandom.isChecked()==True:
+            surfaceConst=False
+        else:
+            return
+
+        surfaceConst_theta=0
+        surfaceConst_phi=0
+        surfaceRandom_samples=0
+
+        if surfaceConst==True:
+            surfaceConst_theta=float(win.surfaceConst_theta.text())
+            surfaceConst_phi=float(win.surfaceConst_phi.text())
+        else:
+            surfaceRandom_samples=int(win.surfaceRandom_samples.text())
+
+
+    except Exception as e:
+        print(e)
+        return
+
+
+    selectedFile, _filter=QtGui.QFileDialog.getSaveFileName(caption="Open file")
+    if selectedFile!="":
+        with h5py.File(selectedFile, "w") as f:
+            f.attrs.create("Datetime", datetime.now().isoformat(" "))
+            f.create_dataset("Original", data=dispCube1)
+            f.create_dataset("Refracted", data=dispCube2)
+            f.attrs.create("Offset", [kxMin, kyMin, eMin])
+            f.attrs.create("Delta", [dkx, dky, de])
+            f.attrs.create("Size", [kxCount, kyCount, eCount])
+            f.attrs.create("W", W)
+            f.attrs.create("V0", V0)
+            f.attrs.create("V1", V1)
+            f.attrs.create("a", a)
+
+            if kFlat==True:
+                f.attrs.create("kPlane", "Flat")
+                f.attrs.create("kPlane_kz", kFlat_kz)
+            else:
+                f.attrs.create("kPlane", "Curved")
+                f.attrs.create("kPlane_k", kCurved_k)
+
+            if surfaceConst==True:
+                f.attrs.create("Surface", "Constant")
+                f.attrs.create("Surface_theta", surfaceConst_theta)
+                f.attrs.create("Surface_phi", surfaceConst_phi)
+            else:
+                f.attrs.create("Surface", "Random")
+                f.attrs.create("Surface_samples", surfaceRandom_samples)
+
+
     
 
 win.startCalc.clicked.connect(startCalc)
-win.plotDisp.clicked.connect(plotDisp)
+win.plotDisp1.clicked.connect(plotDisp)
+win.plotDisp2.clicked.connect(plotDisp)
+win.export.clicked.connect(exportDisp)
 win.kxIndex.valueChanged.connect(plotDisp)
 win.kyIndex.valueChanged.connect(plotDisp)
 win.eIndex.valueChanged.connect(plotDisp)
