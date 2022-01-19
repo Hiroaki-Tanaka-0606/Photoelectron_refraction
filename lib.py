@@ -77,6 +77,7 @@ def calc2(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, surfaceConst, surfaceCon
         # print(nList)
 
     for i in range(kxCount+1):
+        print(i)
         k[0]=kxMin+dkx*i
         for j in range(kyCount+1):
             k[1]=kyMin+dky*j
