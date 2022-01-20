@@ -622,13 +622,16 @@ def importDisp():
             win.kyMintext.setText(("{0:f}").format(offset[1]))
             win.eMintext.setText(("{0:f}").format(offset[2]))
 
-            win.kxMaxtext.setText(("{0:f}").format(offset[0]+delta[0]*size[0]))
-            win.kyMaxtext.setText(("{0:f}").format(offset[1]+delta[1]*size[1]))
-            win.eMaxtext.setText(("{0:f}").format(offset[2]+delta[2]*size[2]))
+            win.kxMaxtext.setText(("{0:f}").format(offset[0]+delta[0]*(size[0]-1)))
+            win.kyMaxtext.setText(("{0:f}").format(offset[1]+delta[1]*(size[1]-1)))
+            win.eMaxtext.setText(("{0:f}").format(offset[2]+delta[2]*(size[2]-1)))
 
             win.kxCounttext.setText(("{0:d}").format(size[0]))
             win.kyCounttext.setText(("{0:d}").format(size[1]))
             win.eCounttext.setText(("{0:d}").format(size[2]))
+            win.kxIndex.setMaximum(size[0]-1)
+            win.kyIndex.setMaximum(size[1]-1)
+            win.eIndex.setMaximum(size[2]-1)
 
             win.Wtext.setText(("{0:f}").format(f.attrs["W"]))
             win.V0text.setText(("{0:f}").format(f.attrs["V0"]))

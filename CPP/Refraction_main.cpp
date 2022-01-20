@@ -294,7 +294,7 @@ int main(int argc, char** argv){
 				vec[2]=zDist(mt);
 
 				double vec_length=sqrt(inProd(vec, vec));
-				if(0.1 < vec_length && 1 < vec_length){
+				if(0.1 < vec_length && vec_length < 1){
 					for(j=0; j<3; j++){
 						nList[i][j]=vec[j]/vec_length;
 					}
