@@ -4,4 +4,4 @@ Config.py
 *.h5
 *~
 *.dat
-
+*.o
