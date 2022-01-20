@@ -3,3 +3,5 @@ Config.py
 *.hdf5
 *.h5
 *~
+*.dat
+
