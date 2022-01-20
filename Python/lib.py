@@ -18,7 +18,7 @@ def profileCube(dkx, dky, de, sigmak, sigmae, sigmaMax):
     for i in range(0, kxLast+1):
         for j in range(0, kyLast+1):
             for k in range(0, eLast+1):
-                weight=gauss(i*dkx, sigmak)*gauss(j*dky, sigmak)*gauss(k*de, sigmae)
+                weight=gauss(i*dkx, sigmak)*gauss(j*dky, sigmak)*gauss(k*de, sigmae)*dkx*dky*de
                 cube[kxLast+i][kyLast+j][eLast+k]=weight
                 cube[kxLast+i][kyLast+j][eLast-k]=weight
                 cube[kxLast+i][kyLast-j][eLast+k]=weight
@@ -36,9 +36,9 @@ def calc1(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, kxMin, kxMax, kxCount, d
     profile, kxCenter, kyCenter, eCenter=profileCube(dkx, dky, de, sigmak, sigmae, Config.sigmaMax)
 
     k=np.zeros((3))
-    for i in range(kxCount+1):
+    for i in range(kxCount):
         k[0]=kxMin+dkx*i
-        for j in range(kyCount+1):
+        for j in range(kyCount):
             k[1]=kyMin+dky*j
             if kFlat==True:
                 k[2]=kFlat_kz
@@ -76,10 +76,10 @@ def calc2(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, surfaceConst, surfaceCon
         
         # print(nList)
 
-    for i in range(kxCount+1):
+    for i in range(kxCount):
         print(i)
         k[0]=kxMin+dkx*i
-        for j in range(kyCount+1):
+        for j in range(kyCount):
             k[1]=kyMin+dky*j
             if kFlat==True:
                 k[2]=kFlat_kz

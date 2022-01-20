@@ -229,6 +229,9 @@ class MainWindow(QtGui.QMainWindow):
         self.export=QtGui.QPushButton("Export")
         row7.addWidget(self.export)
 
+        self.importH5=QtGui.QPushButton("Import")
+        row7.addWidget(self.importH5)
+
         # Row 8: kx, ky, and e index
         row8=QtGui.QHBoxLayout()
         row8.setAlignment(QtCore.Qt.AlignLeft)
@@ -602,6 +605,73 @@ def plotDisp():
     win.imgEy.setImage(Ey)
     win.imgxy.setImage(xy)
 
+def importDisp():
+    global dispCube1
+    global dispCube2
+
+    selectedFile, _filter=QtGui.QFileDialog.getOpenFileName(caption="Open file")
+    if selectedFile!="":
+        with h5py.File(selectedFile, "r") as f:
+            dispCube1=np.array(f["Original"])
+            dispCube2=np.array(f["Refracted"])
+            offset=np.array(f.attrs["Offset"])
+            delta=np.array(f.attrs["Delta"])
+            size=np.array(f.attrs["Size"])
+
+            win.kxMintext.setText(("{0:f}").format(offset[0]))
+            win.kyMintext.setText(("{0:f}").format(offset[1]))
+            win.eMintext.setText(("{0:f}").format(offset[2]))
+
+            win.kxMaxtext.setText(("{0:f}").format(offset[0]+delta[0]*size[0]))
+            win.kyMaxtext.setText(("{0:f}").format(offset[1]+delta[1]*size[1]))
+            win.eMaxtext.setText(("{0:f}").format(offset[2]+delta[2]*size[2]))
+
+            win.kxCounttext.setText(("{0:d}").format(size[0]))
+            win.kyCounttext.setText(("{0:d}").format(size[1]))
+            win.eCounttext.setText(("{0:d}").format(size[2]))
+
+            win.Wtext.setText(("{0:f}").format(f.attrs["W"]))
+            win.V0text.setText(("{0:f}").format(f.attrs["V0"]))
+            win.V1text.setText(("{0:f}").format(f.attrs["V1"]))
+            win.atext.setText(("{0:f}").format(f.attrs["a"]))
+
+            k0=np.array(f.attrs["k0"])
+            win.k0xtext.setText(("{0:f}").format(k0[0]))
+            win.k0ytext.setText(("{0:f}").format(k0[1]))
+            win.k0ztext.setText(("{0:f}").format(k0[2]))
+            
+            win.sigmaktext.setText(("{0:f}").format(f.attrs["sigmak"]))
+            win.sigmaetext.setText(("{0:f}").format(f.attrs["sigmae"]))
+
+            kPlane=f.attrs["kPlane"]
+            if kPlane=="Flat":
+                win.kFlat.setChecked(True)
+                win.kCurved.setChecked(False)
+                win.kFlat_kz.setText(("{0:f}").format(f.attrs["kPlane_kz"]))
+            elif kPlane=="Curved":
+                win.kFlat.setChecked(False)
+                win.kCurved.setChecked(True)
+                win.kCurved_k.setText(("{0:f}").format(f.attrs["kPlane_k"]))
+            else:
+                print(("Error: invalid kPlane {0:s}").format(kPlane))
+
+            surfaceConst=f.attrs["Surface"]
+            if surfaceConst=="Constant":
+                win.surfaceConst.setChecked(True)
+                win.surfaceRandom.setChecked(False)
+                win.surfaceConst_theta.setText(("{0:f}").format(f.attrs["Surface_theta"]))
+                win.surfaceConst_phi.setText(("{0:f}").format(f.attrs["Surface_phi"]))
+            elif surfaceConst=="Random":
+                win.surfaceConst.setChecked(False)
+                win.surfaceRandom.setChecked(True)
+                win.surfaceRandom_samples.setText(("{0:d}").format(f.attrs["Surface_samples"]))
+
+
+    print("Import finished")
+    plotDisp()
+                               
+
+    
 def exportDisp():
     global dispCube1
     global dispCube2
@@ -668,6 +738,10 @@ def exportDisp():
         else:
             surfaceRandom_samples=int(win.surfaceRandom_samples.text())
 
+            
+        sigmak=float(win.sigmaktext.text())
+        sigmae=float(win.sigmaetext.text())
+
 
     except Exception as e:
         print(e)
@@ -687,6 +761,9 @@ def exportDisp():
             f.attrs.create("V0", V0)
             f.attrs.create("V1", V1)
             f.attrs.create("a", a)
+            f.attrs.create("k0", k0)
+            f.attrs.create("sigmak", sigmak)
+            f.attrs.create("sigmae", sigmae)
 
             if kFlat==True:
                 f.attrs.create("kPlane", "Flat")
@@ -710,6 +787,7 @@ win.startCalc.clicked.connect(startCalc)
 win.plotDisp1.clicked.connect(plotDisp)
 win.plotDisp2.clicked.connect(plotDisp)
 win.export.clicked.connect(exportDisp)
+win.importH5.clicked.connect(importDisp)
 win.kxIndex.valueChanged.connect(plotDisp)
 win.kyIndex.valueChanged.connect(plotDisp)
 win.eIndex.valueChanged.connect(plotDisp)
