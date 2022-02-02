@@ -6,9 +6,11 @@ import numpy as np
 import Config
 import random
 
+# gauss function
 def gauss(x, s):
     return 1.0/(math.sqrt(2*math.pi)*s)*math.exp(-x*x/(s*s*2))
 
+# broadening profile
 def profileCube(dkx, dky, de, sigmak, sigmae, sigmaMax):
     kxLast=math.ceil(sigmak*sigmaMax/dkx)
     kyLast=math.ceil(sigmak*sigmaMax/dky)
@@ -28,10 +30,10 @@ def profileCube(dkx, dky, de, sigmak, sigmae, sigmaMax):
                 cube[kxLast-i][kyLast-j][eLast+k]=weight
                 cube[kxLast-i][kyLast-j][eLast-k]=weight
 
-    # print(cube.sum()*dkx*dky*de)
+    # print(cube.sum()*dkx*dky*de) # should be close to 1
     return cube, kxLast, kyLast, eLast
 
-
+# Original dispersion
 def calc1(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, kxMin, kxMax, kxCount, dkx, kyMin, kyMax, kyCount, dky, eMin, eMax, eCount, de, sigmak, sigmae, dispCube1):
     profile, kxCenter, kyCenter, eCenter=profileCube(dkx, dky, de, sigmak, sigmae, Config.sigmaMax)
 
@@ -59,6 +61,7 @@ def calc1(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, kxMin, kxMax, kxCount, d
                         if 0<=i3 and i3<kxCount and 0<=j3 and j3<kyCount and 0<=k3 and k3<eCount:
                             dispCube1[i3][j3][k3]+=profile[i2+kxCenter][j2+kyCenter][k2+eCenter]
 
+# Refracted dispersion
 def calc2(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, surfaceConst, surfaceConst_theta, surfaceConst_phi, surfaceRandom_samples, kxMin, kxMax, kxCount, dkx, kyMin, kyMax, kyCount, dky, eMin, eMax, eCount, de, sigmak, sigmae, dispCube2):
     profile, kxCenter, kyCenter, eCenter=profileCube(dkx, dky, de, sigmak, sigmae, Config.sigmaMax)
 
@@ -69,6 +72,7 @@ def calc2(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, surfaceConst, surfaceCon
         n[1]=math.sin(surfaceConst_theta)*math.sin(surfaceConst_phi)
         n[2]=math.cos(surfaceConst_theta)
 
+    # generate random surfaces
     if surfaceConst==False:
         nList=np.zeros((surfaceRandom_samples, 3))
         for i in range(surfaceRandom_samples):
@@ -91,12 +95,17 @@ def calc2(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, surfaceConst, surfaceCon
             epk=np.inner(k, k)/2.0-V0
             eK=round((esk-eMin)/de)
 
+            # Constant surface 
             if surfaceConst==True:
                 K=calcK(k, epk, n)
+                # Exclude full reflection
+                if K is None:
+                    continue
 
                 iK=round((K[0]-kxMin)/dkx)
                 jK=round((K[1]-kyMin)/dky)
 
+                # Append dispersion
                 for i2 in range(-kxCenter, kxCenter+1):
                     i3=iK+i2
                     for j2 in range(-kyCenter, kyCenter+1):
@@ -106,10 +115,12 @@ def calc2(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, surfaceConst, surfaceCon
                             if 0<=i3 and i3<kxCount and 0<=j3 and j3<kyCount and 0<=k3 and k3<eCount:
                                 dispCube2[i3][j3][k3]+=profile[i2+kxCenter][j2+kyCenter][k2+eCenter]
 
+            # Random surfaces
             else:
                 for t in range(surfaceRandom_samples):
                     n=nList[t]
                     K=calcK(k, epk, n)
+                    # Exclude full reflection
                     if K is None:
                         # print("!!Full reflection")
                         continue
@@ -117,6 +128,7 @@ def calc2(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, surfaceConst, surfaceCon
                     iK=round((K[0]-kxMin)/dkx)
                     jK=round((K[1]-kyMin)/dky)
 
+                    # Append dispersion
                     for i2 in range(-kxCenter, kxCenter+1):
                         i3=iK+i2
                         for j2 in range(-kyCenter, kyCenter+1):
@@ -126,10 +138,7 @@ def calc2(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, surfaceConst, surfaceCon
                                 if 0<=i3 and i3<kxCount and 0<=j3 and j3<kyCount and 0<=k3 and k3<eCount:
                                     dispCube2[i3][j3][k3]+=profile[i2+kxCenter][j2+kyCenter][k2+eCenter]/surfaceRandom_samples
 
-
-
-
-
+# Calculate refracted wavevector K
 def calcK(k, epk, n):
     KLength=math.sqrt(2*epk)
 
@@ -149,6 +158,7 @@ def calcK(k, epk, n):
 
     return K
 
+# Generate random surface
 def genSurface():
     nt=np.zeros((3))
     while True:
@@ -161,15 +171,3 @@ def genSurface():
             n=nt/nt_length
             return n
         
-        
-            
-
-
-
-
-
-
-
-
-            
-

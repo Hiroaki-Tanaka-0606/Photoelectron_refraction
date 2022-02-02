@@ -1,34 +1,37 @@
 # Photoelectron_refraction
 # GUI
 
+# libraries from pip
 from pyqtgraph.Qt import QtGui, QtCore, QtWidgets
 import pyqtgraph as pg
-
 import numpy as np
 import math
-import lib
 import h5py
 from datetime import datetime
 
+# libraries in this package
+import lib
 import Config
 
+# MainWindow: a class for the window
 class MainWindow(QtGui.QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
-
         self.setWindowTitle("Photoelectron refraction")
 
+        # Font (normal)
         font=QtGui.QFont()
         font.setFamilies(Config.fontFamilies)
         font.setPixelSize(Config.fontSize_normal)
 
+        # Font (bold)
         bFont=QtGui.QFont(font)
         bFont.setBold(True)
 
+        # Frame (Vertical box layout)
         vbox=QtGui.QVBoxLayout()
         vbox.setContentsMargins(*Config.ContentsMargins)
         vbox.setAlignment(QtCore.Qt.AlignTop)
-
         mainWidget=QtGui.QWidget()
         mainWidget.setLayout(vbox)
         self.setCentralWidget(mainWidget)
@@ -192,7 +195,7 @@ class MainWindow(QtGui.QMainWindow):
         self.eCounttext=QtGui.QLineEdit("51")
         row5.addWidget(self.eCounttext) 
 
-        # Row 6: boradening
+        # Row 6: broadening
         row6=QtGui.QHBoxLayout()
         row6.setAlignment(QtCore.Qt.AlignLeft)
         vbox.addLayout(row6)
@@ -209,7 +212,7 @@ class MainWindow(QtGui.QMainWindow):
         self.sigmaetext=QtGui.QLineEdit("0.05")
         row6.addWidget(self.sigmaetext)
 
-        # Row 7: start calculation and plot
+        # Row 7: start calculation, plot, export, import buttons
         row7=QtGui.QHBoxLayout()
         row7.setAlignment(QtCore.Qt.AlignLeft)
         vbox.addLayout(row7)
@@ -232,7 +235,7 @@ class MainWindow(QtGui.QMainWindow):
         self.importH5=QtGui.QPushButton("Import")
         row7.addWidget(self.importH5)
 
-        # Row 8: kx, ky, and e index
+        # Row 8: kx, ky, and e index of guide lines
         row8=QtGui.QHBoxLayout()
         row8.setAlignment(QtCore.Qt.AlignLeft)
         vbox.addLayout(row8)
@@ -266,7 +269,7 @@ class MainWindow(QtGui.QMainWindow):
         self.eValue=QtGui.QLabel()
         row8.addWidget(self.eValue)
 
-        # Row 9: dispersion
+        # Row 9: dispersion graph
         row9=QtGui.QHBoxLayout()
         row9.setAlignment(QtCore.Qt.AlignLeft)
         vbox.addLayout(row9)
@@ -361,11 +364,7 @@ class MainWindow(QtGui.QMainWindow):
         self.hLinexy=pg.InfiniteLine(angle=0, movable=False, pen=Config.pen1)
         self.plotxy.addItem(self.hLinexy, ignoreBounds=True)
 
-        self.bLineEx=pg.InfiniteLine(angle=0, movable=False, pen=Config.pen2)
-        self.plotEx.addItem(self.bLineEx, ignoreBounds=True)
-        self.bLineEy=pg.InfiniteLine(angle=90, movable=False, pen=Config.pen2)
-        self.plotEy.addItem(self.bLineEy, ignoreBounds=True)
-
+        # Key event to move guide lines and plots
         def changeKXYIndices(e):
             if e.key()==QtCore.Qt.Key_Down:
                 self.kyIndex.setValue(self.kyIndex.value()-1)
@@ -381,7 +380,6 @@ class MainWindow(QtGui.QMainWindow):
                 self.eIndex.setValue(self.eIndex.value()-1)
             else:
                 return
-
         
         self.plot3.keyPressEvent=changeKXYIndices
 
@@ -394,23 +392,32 @@ font.setPixelSize(Config.fontSize_normal)
 font.setFamilies(Config.fontFamilies)
 win.setFont(font)
 
+# Original dispersion (numpy array [kx][ky][E])
 dispCube1=None
+# Refracted dispersiom (numpy array [kx][ky][E])
 dispCube2=None
+
+# Execute calculation ("Start calculation" button)
 def startCalc():
     print("----")
     print("Check input parameters...")
+    # Load parameters from GUI, convert to the atomic unit
     try:
+        # W: work function
         W_eV=float(win.Wtext.text())
         W=W_eV/Config.Eh_eV
         print(("{0:32s} = {1:.2f} eV = {2:.2f} Eh").format("Work function", W_eV, W))
+        # V0: inner potential
         V0_eV=float(win.V0text.text())
         V0=V0_eV/Config.Eh_eV
         print(("{0:32s} = {1:.2f} eV = {2:.2f} Eh").format("Inner potential", V0_eV, V0))
 
+        # a: parabola parameter
         a=float(win.atext.text())
+        # V1: Energy of parabola top
         V1_eV=float(win.V1text.text())
         V1=V1_eV/Config.Eh_eV
-
+        # k0: Origin of the parabola dispersion in the reciprocal space
         k0_ang=np.zeros((3))
         k0_ang[0]=float(win.k0xtext.text())
         k0_ang[1]=float(win.k0ytext.text())
@@ -418,6 +425,7 @@ def startCalc():
         k0=k0_ang*Config.Bohr_ang
         print(("{0:32s} = (k - ({1:.2f}, {2:.2f}, {3:.2f}))^2 * {4:.2f} /2 - {5:.2f} + {6:.2f} (Eh)").format("Initial state dispersion", k0[0], k0[1], k0[2], a, W, V1))
 
+        # Flatness of the plane in the reciprocal space
         kFlat=True
         if win.kFlat.isChecked()==True:
             pass
@@ -427,6 +435,7 @@ def startCalc():
             print("Error: kFlat or kCurved should be checked")
             return
 
+        # Parameters to specify the plane
         kFlat_kz=0
         kCurved_k=0
         if kFlat==True:
@@ -438,6 +447,7 @@ def startCalc():
             kCurved_k=kCurved_k_ang*Config.Bohr_ang
             print(("{0:32s} = curved, |k| = {1:.2f} Ang^-1 = {2:.2f} Bohr^-1").format("k plane", kCurved_k_ang, kCurved_k))
 
+        # Random or constant crystal surface, where the refraction happens
         surfaceConst=True
         if win.surfaceConst.isChecked()==True:
             pass
@@ -447,10 +457,10 @@ def startCalc():
             print("Error: surfaceConst or surfaceRandom should be checked")
             return
 
+        # Parameters to specify the crystal surface
         surfaceConst_theta=0
         surfaceConst_phi=0
         surfaceRandom_samples=0
-
         if surfaceConst==True:
             surfaceConst_theta_deg=float(win.surfaceConst_theta.text())
             surfaceConst_theta=math.radians(surfaceConst_theta_deg)
@@ -461,42 +471,44 @@ def startCalc():
             surfaceRandom_samples=int(win.surfaceRandom_samples.text())
             print(("{0:32s} = random, samples = {1:d}").format("Surface orientation", surfaceRandom_samples))
 
+        # Calculation range of kx
         kxMin_ang=float(win.kxMintext.text())
         kxMin=kxMin_ang*Config.Bohr_ang
         kxMax_ang=float(win.kxMaxtext.text())
         kxMax=kxMax_ang*Config.Bohr_ang
         kxCount=int(win.kxCounttext.text())
-
         print(("{0:32s} = {1:.2f} to {2:.2f}, {3:d} points").format("kx range (Ang^-1)", kxMin_ang, kxMax_ang, kxCount))
         print(("{0:32s} = {1:.2f} to {2:.2f}, {3:d} points").format("kx range (Bohr^-1)", kxMin, kxMax, kxCount))
 
+        # Calculation range of ky
         kyMin_ang=float(win.kyMintext.text())
         kyMin=kyMin_ang*Config.Bohr_ang
         kyMax_ang=float(win.kyMaxtext.text())
         kyMax=kyMax_ang*Config.Bohr_ang
         kyCount=int(win.kyCounttext.text())
-
         print(("{0:32s} = {1:.2f} to {2:.2f}, {3:d} points").format("ky range (Ang^-1)", kyMin_ang, kyMax_ang, kyCount))
         print(("{0:32s} = {1:.2f} to {2:.2f}, {3:d} points").format("ky range (Bohr^-1)", kyMin, kyMax, kyCount))
 
+        # Calculation range of energy
+        ## Please be careful that the inputs are the binding energies
         eMin_eV=float(win.eMintext.text())
         eMin=eMin_eV/Config.Eh_eV-W
         eMax_eV=float(win.eMaxtext.text())
         eMax=eMax_eV/Config.Eh_eV-W
         eCount=int(win.eCounttext.text())
-
         print(("{0:32s} = {1:.2f} to {2:.2f}, {3:d} points").format("E range from EF (eV)", eMin_eV, eMax_eV, eCount))
         print(("{0:32s} = {1:.2f} to {2:.2f}, {3:d} points").format("E range from Vacuum (eV)", eMin*Config.Eh_eV, eMax*Config.Eh_eV, eCount))
         print(("{0:32s} = {1:.2f} to {2:.2f}, {3:d} points").format("E range from Vacuum (Eh)", eMin, eMax, eCount))
 
+        # Broadening parameters
         sigmak_ang=float(win.sigmaktext.text())
         sigmak=sigmak_ang*Config.Bohr_ang
         sigmae_eV=float(win.sigmaetext.text())
         sigmae=sigmae_eV/Config.Eh_eV
-
         print(("{0:32s} = {1:.2f} Ang^-1 = {2:.2f} Bohr^-1").format("k broadening", sigmak_ang, sigmak))
         print(("{0:32s} = {1:.2f} eV = {2:.3f} Eh").format("E broadening", sigmae_eV, sigmae))
 
+        # size of 1 pixel, calculated from minimum, maximum, and number of points
         dkx=(kxMax-kxMin)/(kxCount-1)
         dky=(kyMax-kyMin)/(kyCount-1)
         de=(eMax-eMin)/(eCount-1)
@@ -507,10 +519,12 @@ def startCalc():
         print(e)
         return
 
+    # Calculate original dispersion
     global dispCube1
     dispCube1=np.zeros((kxCount, kyCount, eCount))
     lib.calc1(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, kxMin, kxMax, kxCount, dkx, kyMin, kyMax, kyCount, dky, eMin, eMax, eCount, de, sigmak, sigmae, dispCube1)
 
+    # Calculate refracted dispersion
     global dispCube2
     dispCube2=np.zeros(dispCube1.shape)
     lib.calc2(W, V0, k0, a, V1, kFlat, kFlat_kz, kCurved_k, surfaceConst, surfaceConst_theta, surfaceConst_phi, surfaceRandom_samples, kxMin, kxMax, kxCount, dkx, kyMin, kyMax, kyCount, dky, eMin, eMax, eCount, de, sigmak, sigmae, dispCube2)
@@ -522,6 +536,7 @@ def startCalc():
 
     plotDisp()
 
+# Plot dispersion
 def plotDisp():
     global dispCube1
     global dispCube2
@@ -529,10 +544,12 @@ def plotDisp():
     if dispCube1 is None or dispCube2 is None:
         return
 
+    # Parameters to specify plots (cross sections of a cube)
     kxIndex=win.kxIndex.value()
     kyIndex=win.kyIndex.value()
     eIndex=win.eIndex.value()
 
+    # Load parameters
     try:    
         kxMin=float(win.kxMintext.text())
         kxMax=float(win.kxMaxtext.text())
@@ -562,10 +579,12 @@ def plotDisp():
     kyValue=kyMin+dky*kyIndex
     eValue=eMin+de*eIndex
 
+    # Display kx, ky, and e values calculated from indices
     win.kxValue.setText(("({0:.3f})").format(kxValue))
     win.kyValue.setText(("({0:.3f})").format(kyValue))
     win.eValue.setText(("({0:.3f})").format(eValue))
-
+    
+    # Draw guide lines
     win.vLineEx.setPos(kxValue)
     win.hLineEx.setPos(eValue)
     win.vLineEy.setPos(eValue)
@@ -573,6 +592,7 @@ def plotDisp():
     win.vLinexy.setPos(kxValue)
     win.hLinexy.setPos(kyValue)
 
+    # Obtain plots (cross sections)
     if win.plotDisp1.isChecked()==True:
         Ex=dispCube1[:,kyIndex,:]
         Ey=dispCube1[kxIndex,:,:]
@@ -584,7 +604,7 @@ def plotDisp():
     else:
         return
 
-
+    # Set plot data
     tr_Ex=QtGui.QTransform()
     tr_Ex.translate(kxMin-dkx/2,eMin-de/2)
     tr_Ex.scale(dkx, de)
@@ -605,12 +625,16 @@ def plotDisp():
     win.imgEy.setImage(Ey)
     win.imgxy.setImage(xy)
 
+# import dispersion from a HDF5 file
+# This function is also available for HDF5 files output from the C++ version
 def importDisp():
     global dispCube1
     global dispCube2
 
+    # A dialog window to select a file
     selectedFile, _filter=QtGui.QFileDialog.getOpenFileName(caption="Open file")
     if selectedFile!="":
+        # load data
         with h5py.File(selectedFile, "r") as f:
             dispCube1=np.array(f["Original"])
             dispCube2=np.array(f["Refracted"])
@@ -669,16 +693,15 @@ def importDisp():
                 win.surfaceRandom.setChecked(True)
                 win.surfaceRandom_samples.setText(("{0:d}").format(f.attrs["Surface_samples"]))
 
-
     print("Import finished")
     plotDisp()
                                
-
-    
+# Export dispersion to a HDF5 file
 def exportDisp():
     global dispCube1
     global dispCube2
     
+    # Load parameters from GUI
     try:    
         kxMin=float(win.kxMintext.text())
         kxMax=float(win.kxMaxtext.text())
@@ -695,7 +718,6 @@ def exportDisp():
         dkx=(kxMax-kxMin)/(kxCount-1)
         dky=(kyMax-kyMin)/(kyCount-1)
         de=(eMax-eMin)/(eCount-1)
-
         
         W=float(win.Wtext.text())
         V0=float(win.V0text.text())
@@ -740,19 +762,18 @@ def exportDisp():
             surfaceConst_phi=float(win.surfaceConst_phi.text())
         else:
             surfaceRandom_samples=int(win.surfaceRandom_samples.text())
-
             
         sigmak=float(win.sigmaktext.text())
         sigmae=float(win.sigmaetext.text())
-
 
     except Exception as e:
         print(e)
         return
 
-
+    # A dialog window to select a file
     selectedFile, _filter=QtGui.QFileDialog.getSaveFileName(caption="Open file")
     if selectedFile!="":
+        # Write data
         with h5py.File(selectedFile, "w") as f:
             f.attrs.create("Datetime", datetime.now().isoformat(" "))
             f.create_dataset("Original", data=dispCube1)
@@ -783,9 +804,7 @@ def exportDisp():
                 f.attrs.create("Surface", "Random")
                 f.attrs.create("Surface_samples", surfaceRandom_samples)
 
-
-    
-
+# Connect buttons and event functions
 win.startCalc.clicked.connect(startCalc)
 win.plotDisp1.clicked.connect(plotDisp)
 win.plotDisp2.clicked.connect(plotDisp)

@@ -14,6 +14,7 @@
 using namespace std;
 using namespace H5;
 
+// Load a line from input
 void readLine(char* line, int buffer_length, FILE* input){
 	char* fgets_status=fgets(line, buffer_length, input);
 	if(fgets_status==NULL){
@@ -22,14 +23,17 @@ void readLine(char* line, int buffer_length, FILE* input){
 	}
 }
 
+// gauss function
 double gauss(double x, double s){
 	return 1.0/(sqrt(2*M_PI)*s)*exp(-x*x/(s*s*2));
 }
 
+// inner product
 double inProd(double* a, double* b){
 	return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
 }
 
+// Calculate refracted wavevector K
 bool calcK(double* k, double epk, double* n, double* K){
 	double KLength=sqrt(2*epk);
 
@@ -62,12 +66,14 @@ int main(int argc, char** argv){
 	}
 
 	// constatnts
+	/// 1 Hartree (eV)
 	double Eh_eV=27.2114;
+	/// 1 Bohr (Ang)
 	double Bohr_ang=0.529177;
+	/// Calculation range of the gauss function
 	double sigmaMax=5.0;
-		
 
-	// load input
+	// load input and convert to atomic unit
 	FILE* input=fopen(argv[1], "r");
 	// variables
 	double W;                  // work function (Eh)
@@ -238,6 +244,7 @@ int main(int argc, char** argv){
 	int kyCenter=ceil(sigmak*sigmaMax/dky);
 	int eCenter=ceil(sigmae*sigmaMax/de);
 
+	// Gaussian broadened cube
 	double cube[kxCenter*2+1][kyCenter*2+1][eCenter*2+1];
 #pragma omp parallel private(j, k) firstprivate(kyCenter, eCenter, dkx, dky, de, sigmak, sigmae)
 #pragma omp for
@@ -271,9 +278,12 @@ int main(int argc, char** argv){
 	}
 	printf("Weight sum: %.4f\n", sum);*/
 
+	// Original dispersion
 	double dispCube1[kxCount][kyCount][eCount]={0};
+	// Refracted dispersion
 	double dispCube2[kxCount][kyCount][eCount]={0};
 
+	// Generate vectors perpendicular to surface(s)
 	int nCount= (surfaceConst==true) ? 1 : surfaceRandom_samples;
 	double nList[nCount][3];
 	if(surfaceConst==true){
@@ -281,6 +291,7 @@ int main(int argc, char** argv){
 		nList[0][1]=sin(surfaceConst_theta)*sin(surfaceConst_phi);
 		nList[0][2]=cos(surfaceConst_theta);
 	}else{
+		// random surface generation
 		random_device seed_gen;
 		mt19937 mt(seed_gen());
 		uniform_real_distribution<> xDist(-1.0, 1.0);
@@ -310,6 +321,7 @@ int main(int argc, char** argv){
 	
 	cout << "Calculating dispersion" << endl;
   start=chrono::system_clock::now();
+  // Calculate dispersions
 #pragma omp parallel private(j, k) firstprivate(kFlat_kz, kCurved_k, a, W, V1, V0, cube, kxCenter, kyCenter, eCenter, nCount, nList)
 # pragma omp for
 	for(i=0; i<kxCount; i++){
@@ -333,7 +345,7 @@ int main(int argc, char** argv){
 
 			int i2, j2, k2;
 			int i3, j3, k3;
-			// cube1
+			// cube1 (original)
 			for(i2=-kxCenter; i2<=kxCenter; i2++){
 				i3=i+i2;
 				for(j2=-kyCenter; j2<=kyCenter; j2++){
@@ -346,12 +358,12 @@ int main(int argc, char** argv){
 					}
 				}
 			}
-			
 
-			// cube2
+			// cube2 (refracted)
 			double K[3];
 			int iK, jK;
 			for(k=0; k<nCount; k++){
+				// calcK returns false is full reflection (no refracted wave) happens
 				if(calcK(k1, epk, nList[k], K)){
 					iK=round((K[0]-kxMin)/dkx);
 					jK=round((K[1]-kyMin)/dky);
