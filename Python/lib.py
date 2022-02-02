@@ -152,7 +152,8 @@ def calcK(k, epk, n):
 
     KPerpLength=math.sqrt(KPerpLength2)
     if kPerpLength<0:
-        KPerpLength*=-1
+        # KPerpLength*=-1
+        return None
 
     K=kPara+KPerpLength*n
 

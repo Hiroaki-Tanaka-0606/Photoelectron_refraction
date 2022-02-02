@@ -50,7 +50,8 @@ bool calcK(double* k, double epk, double* n, double* K){
 	}
 	double KPerpLength=sqrt(KPerpLength2);
 	if(kPerpLength<0){
-		KPerpLength*=-1;
+		// KPerpLength*=-1;
+		return false;
 	}
 	for(i=0; i<3; i++){
 		K[i]=kPara[i]+KPerpLength*n[i];
