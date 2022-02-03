@@ -5,7 +5,7 @@ It has Python and C++ codes; Python version is available for any OS in which Pyt
 Since C++ version is much faster than Python version, we recommend to use C++ version for calculations with many (>1000) randomized surfaces.
 
 # Description
-See [Documentation (JP)](https://github.com/Hiroaki-Tanaka-0606/Photoelectron_refraction/blob/main/Docs/Documentation_jp.pdf) or [Documentation (EN)].
+See [Documentation (JP)](https://github.com/Hiroaki-Tanaka-0606/Photoelectron_refraction/blob/main/Docs/Documentation_jp.pdf) or [Documentation (EN)](https://github.com/Hiroaki-Tanaka-0606/Photoelectron_refraction/blob/main/Docs/Documentation_.pdf).
 
 # Usage
 
