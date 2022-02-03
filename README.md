@@ -23,6 +23,7 @@ Execute the following command to open GUI and perform calculations.
 
 ## C++ version (/CPP)
 You need to install HDF5 package from https://www.hdfgroup.org/downloads/hdf5 .
+Please don't forget to include ```--enable-cxx``` option when executing ```configure```.
 After installation, please modify ```Makefile``` adequately and compile the package by ```make``` command.
 The package is based on OpenMP parallelization, so if you don't use OpenMP you need to modify the program.
 
