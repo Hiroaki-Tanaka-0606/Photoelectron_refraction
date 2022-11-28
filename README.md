@@ -36,5 +36,5 @@ When compilation has finished successfully, you can perform calculations by
 ```
 The description of the input file is writtein in the document above.
 
-Examples of the input file are in [Examples](https://github.com/Hiroaki-Tanaka-0606/Photoelectron_refraction/tree/main/Examples) directory, which were used in [this paper (in preparation)]().
+Examples of the input file are in [Examples](https://github.com/Hiroaki-Tanaka-0606/Photoelectron_refraction/tree/main/Examples) directory.
 
