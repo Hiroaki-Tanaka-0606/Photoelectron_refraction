@@ -1,0 +1,13 @@
+5           # work function
+12          # inner potential
+0 0 4.07       # k0
+-1.385          # a
+0           # V1
+1 4.07         # curved(0)/flat(1), k/kz
+0 100000     # random(0)/const(1), samples/theta, phi
+-1 1 201 # kx min, max, count
+-1 1 201 # ky min, max, count
+-1 0.1 56   # e  min, max, count
+0.01        # sigma k
+0.02        # sigma e
+data_VUV.hdf5   # output
